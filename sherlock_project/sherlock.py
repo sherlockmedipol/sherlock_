@@ -41,6 +41,7 @@ from sherlock_project.result import QueryResult
 from sherlock_project.notify import QueryNotify
 from sherlock_project.notify import QueryNotifyPrint
 from sherlock_project.sites import SitesInformation
+from sherlock_project.async_sherlock import AsyncSherlock, ScanConfig, run_scan
 from colorama import init
 from argparse import ArgumentTypeError
 
