@@ -55,13 +55,9 @@ class LocalStorage:
         }
 
     def _load_index(self) -> List[Dict[str, Any]]:
-        """Load the search history index from the index file.
-
-        Returns an empty list if the file is missing or corrupted.
-        """
+        """Load the search history index from the index file."""
         if not self.index_file.exists():
             return []
-
         try:
             with open(self.index_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -69,7 +65,6 @@ class LocalStorage:
                     return data
                 return []
         except (json.JSONDecodeError, IOError, ValueError):
-            # Handle corrupted JSON gracefully: return empty list
             return []
 
     def _save_index(self, index: List[Dict[str, Any]]) -> None:
@@ -78,56 +73,15 @@ class LocalStorage:
             with open(self.index_file, 'w', encoding='utf-8') as f:
                 json.dump(index, f, indent=2, ensure_ascii=False)
         except IOError:
-            # If we cannot write the index, just skip — scan file itself is saved
             pass
 
     def load_search_history(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
-        """Load search history from the consolidated index file.
-
-        This is the primary method for retrieving previous searches.
-        Handles missing and corrupted JSON files gracefully.
-
-        Args:
-            limit: Maximum number of history entries to return (most recent first).
-
-        Returns:
-            List of dictionaries, each representing a previous search summary.
-        """
+        """Load search history from the consolidated index file."""
         index = self._load_index()
-
-        # Sort by timestamp descending (newest first)
         index.sort(key=lambda h: h.get("timestamp", ""), reverse=True)
-
         if limit:
             return index[:limit]
         return index
-
-    def delete_scan(self, filepath: str) -> bool:
-        """Tarama kaydini sil"""
-        try:
-            Path(filepath).unlink()
-            # Also remove from index if present
-            index = self._load_index()
-            target_path = str(Path(filepath).resolve())
-            index = [e for e in index if e.get("_filepath") != target_path]
-            self._save_index(index)
-            return True
-        except Exception:
-            return False
-
-    def get_stats(self) -> Dict[str, Any]:
-        """Depolama istatistikleri"""
-        scans = self.get_scan_history()
-        total_scans = len(scans)
-        total_found = sum(s.get('found_count', 0) for s in scans)
-        unique_usernames = len(set(s.get('username') for s in scans))
-
-        return {
-            'total_scans': total_scans,
-            'total_found_accounts': total_found,
-            'unique_usernames': unique_usernames,
-            'storage_path': str(self.history_dir)
-        }
 
     async def save_scan(
         self,
@@ -138,25 +92,14 @@ class LocalStorage:
     ) -> Optional[str]:
         """
         Tarama sonuclarini kaydet.
-
-        Only saves if the search produced at least one claimed result
-        (i.e. non-empty search). Returns None for empty searches.
-
-        Args:
-            username: Aranan kullanici adi
-            results: Tarama sonuclari
-            total_sites: Toplam site sayisi
-            metadata: Ek meta veriler
-
-        Returns:
-            Kaydedilen dosya yolu, or None if search was empty.
+        Only saves if the search produced at least one claimed result.
+        Returns None for empty searches.
         """
         found_count = sum(
             1 for r in results
             if r.status == QueryStatus.CLAIMED
         )
 
-        # Do NOT save empty searches (no claimed results).
         if found_count == 0:
             return None
 
@@ -172,13 +115,12 @@ class LocalStorage:
             'total_sites': total_sites,
             'found_count': found_count,
             'metadata': metadata or {},
-            'results': [r.to_dict() for r in results]
+            'results': [self._result_to_dict(r) for r in results]
         }
 
         async with aiofiles.open(filepath, 'w', encoding='utf-8') as f:
             await f.write(json.dumps(data, indent=2, ensure_ascii=False))
 
-        # Update the consolidated history index (using issue #5 specified field names)
         index = self._load_index()
         index.append({
             "query": username,
@@ -193,47 +135,43 @@ class LocalStorage:
         return str(filepath)
 
     async def load_scan(self, filepath: str) -> Optional[Dict[str, Any]]:
-        """Tarama sonuclarini yukle.
-
-        Handles missing and corrupted JSON files gracefully by returning None.
-
-        Args:
-            filepath: Path to the scan JSON file.
-
-        Returns:
-            Dictionary with scan data, or None if file is missing or corrupted.
-        """
+        """Tarama sonuclarini yukle."""
         path = Path(filepath)
         if not path.exists():
             return None
-
         try:
             async with aiofiles.open(filepath, 'r', encoding='utf-8') as f:
                 content = await f.read()
                 return json.loads(content)
         except (json.JSONDecodeError, IOError):
-            # Handle corrupted JSON gracefully
             return None
 
-    def get_scan_history(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
-        """Tarama gecmisini listele (legacy method, scans individual files).
-
-        This is kept for backward compatibility. For new code,
-        prefer load_search_history().
-
-        Args:
-            limit: Maximum number of history entries to return.
-
-        Returns:
-            List of scan data dictionaries.
-        """
+    async def get_scan_history_async(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Tarama gecmisini async listele (aiofiles ile)"""
         scans = []
-
         if not self.history_dir.exists():
             return scans
-
         for filepath in sorted(self.history_dir.glob('*.json'), reverse=True):
-            # Skip the index file itself
+            if filepath.name == HISTORY_INDEX_FILENAME:
+                continue
+            try:
+                async with aiofiles.open(filepath, 'r', encoding='utf-8') as f:
+                    content = await f.read()
+                    data = json.loads(content)
+                    data['_filepath'] = str(filepath)
+                    scans.append(data)
+            except Exception:
+                continue
+        if limit:
+            scans = scans[:limit]
+        return scans
+
+    def get_scan_history(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Tarama gecmisini listele (senkron)"""
+        scans = []
+        if not self.history_dir.exists():
+            return scans
+        for filepath in sorted(self.history_dir.glob('*.json'), reverse=True):
             if filepath.name == HISTORY_INDEX_FILENAME:
                 continue
             try:
@@ -241,11 +179,61 @@ class LocalStorage:
                     data = json.load(f)
                     data['_filepath'] = str(filepath)
                     scans.append(data)
-            except (json.JSONDecodeError, IOError):
-                # Handle corrupted JSON gracefully: skip this file
+            except Exception:
                 continue
-
         if limit:
             scans = scans[:limit]
-
         return scans
+
+    async def delete_scan_async(self, filepath: str) -> bool:
+        """Tarama kaydini async sil (aiofiles ile)"""
+        try:
+            path = Path(filepath)
+            if path.exists():
+                import aiofiles.os as aio_os
+                await aio_os.unlink(filepath)
+            index = self._load_index()
+            target_path = str(Path(filepath).resolve())
+            index = [e for e in index if e.get("_filepath") != target_path]
+            self._save_index(index)
+            return True
+        except Exception:
+            return False
+
+    def delete_scan(self, filepath: str) -> bool:
+        """Tarama kaydini sil (senkron)"""
+        try:
+            Path(filepath).unlink()
+            index = self._load_index()
+            target_path = str(Path(filepath).resolve())
+            index = [e for e in index if e.get("_filepath") != target_path]
+            self._save_index(index)
+            return True
+        except Exception:
+            return False
+
+    async def get_stats_async(self) -> Dict[str, Any]:
+        """Depolama istatistikleri (async versiyon)"""
+        scans = await self.get_scan_history_async()
+        total_scans = len(scans)
+        total_found = sum(s.get('found_count', 0) for s in scans)
+        unique_usernames = len(set(s.get('username') for s in scans))
+        return {
+            'total_scans': total_scans,
+            'total_found_accounts': total_found,
+            'unique_usernames': unique_usernames,
+            'storage_path': str(self.history_dir)
+        }
+
+    def get_stats(self) -> Dict[str, Any]:
+        """Depolama istatistikleri (senkron)"""
+        scans = self.get_scan_history()
+        total_scans = len(scans)
+        total_found = sum(s.get('found_count', 0) for s in scans)
+        unique_usernames = len(set(s.get('username') for s in scans))
+        return {
+            'total_scans': total_scans,
+            'total_found_accounts': total_found,
+            'unique_usernames': unique_usernames,
+            'storage_path': str(self.history_dir)
+        }
