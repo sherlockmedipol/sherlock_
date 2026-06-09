@@ -277,3 +277,21 @@ class QueryNotifyPrint(QueryNotify):
         Nicely formatted string to get information about this object.
         """
         return str(self.result)
+
+
+class QueryNotifyReporter(QueryNotify):
+    """Query Notify Reporter Object."""
+    
+    def __init__(self, result=None):
+        super().__init__(result)
+        self.accumulated_results = []
+        
+    def start(self, message=None):
+        pass
+        
+    def update(self, result):
+        self.result = result
+        self.accumulated_results.append(result)
+        
+    def finish(self, message=None):
+        pass
