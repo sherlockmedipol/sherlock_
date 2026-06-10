@@ -48,6 +48,8 @@ class LocalStorage:
         http_status = None
         if isinstance(result.context, dict):
             http_status = result.context.get('http_status')
+        elif isinstance(result.context, (int, str)):
+            http_status = result.context
         return {
             'site_name': result.site_name,
             'url_user': result.site_url_user,
@@ -95,16 +97,13 @@ class LocalStorage:
     ) -> Optional[str]:
         """
         Tarama sonuclarini kaydet.
-        Only saves if the search produced at least one claimed result.
-        Returns None for empty searches.
+        Saves all searches (including empty ones) to history.
+        Returns filepath.
         """
         found_count = sum(
             1 for r in results
             if r.status == QueryStatus.CLAIMED
         )
-
-        if found_count == 0:
-            return None
 
         scan_id = self._generate_scan_id()
         filename = self._get_filename(username)
