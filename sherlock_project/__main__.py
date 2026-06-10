@@ -23,7 +23,7 @@ from sherlock_project import sherlock
 if __name__ == "__main__":
     # If the user did not enter any parameters or typed --gui, then start the GUI
     if len(sys.argv) == 1 or "--gui" in sys.argv:
-        print("Starting Sherlock GUI...")
+        print("Starting Sherlock Desktop...")
 
         # To prevent PyQt from giving an error, we delete the --gui parameter that we added ourselves.
         if "--gui" in sys.argv:
@@ -31,15 +31,12 @@ if __name__ == "__main__":
         
         # We call the function that will launch the GUI.
         # (We specifically included the import process here so as not to slow down those who only want to use the terminal.)
-        from sherlock_project.gui_app import run_gui
+        from sherlock_project.gui.app import main as run_gui
         run_gui()
 
     else:
         # We execute the original Sherlock code if the user enters standard arguments from the command line.
         sys.exit(sherlock.main())
-   
-    from sherlock_project import sherlock
-    sherlock.main()
 # Optional tool metadata for demonstration and documentation
 
 

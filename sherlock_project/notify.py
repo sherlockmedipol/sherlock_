@@ -316,3 +316,40 @@ class QueryNotifyReporter(QueryNotify):
         
     def finish(self, message=None):
         pass
+
+
+class QueryNotifyGUI(QueryNotify):
+    """Query Notify GUI Object.
+    
+    Emits signals for the PyQt5 GUI to display results in real-time.
+    """
+
+    def __init__(self, result_signal, result=None):
+        """Create Query Notify GUI Object.
+
+        Keyword Arguments:
+        self           -- This object.
+        result_signal  -- PyQt5 pyqtSignal(str, str, str) to emit (site, status, url).
+        result         -- Object of type QueryResult() containing results for this query.
+        """
+        super().__init__(result)
+        self.result_signal = result_signal
+
+    def start(self, message=None):
+        pass
+
+    def update(self, result):
+        """Notify Update via signal emission.
+
+        Keyword Arguments:
+        self   -- This object.
+        result -- Object of type QueryResult() containing results for this query.
+        """
+        self.result = result
+
+        status_str = "Found" if result.status == QueryStatus.CLAIMED else "Not Found"
+        site_url = result.site_url_user if result.site_url_user else ""
+        self.result_signal.emit(result.site_name, status_str, site_url)
+
+    def finish(self, message=None):
+        pass
