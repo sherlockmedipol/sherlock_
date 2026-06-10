@@ -36,6 +36,8 @@ from sherlock_project.__init__ import (
     __version__,
     forge_api_latest_release,
     get_reporter,
+    is_frozen,
+    get_resource_path,
 )
 
 from sherlock_project.result import QueryStatus
@@ -1025,13 +1027,22 @@ def main():
             base_dir = args.folderoutput if args.folderoutput else ""
             if args.html:
                 h_rep = get_reporter('html')
-                if h_rep: h_rep.generate(username, reporter_results, os.path.join(base_dir, f"{username}.html"))
+                if h_rep: 
+                    h_rep.generate(username, reporter_results, os.path.join(base_dir, f"{username}.html"))
+                else:
+                    print(Style.BRIGHT + Fore.RED + "[-] HTML reporter is not available. Please install 'jinja2'." + Style.RESET_ALL)
             if args.pdf:
                 p_rep = get_reporter('pdf')
-                if p_rep: p_rep.generate(username, reporter_results, os.path.join(base_dir, f"{username}.pdf"))
+                if p_rep: 
+                    p_rep.generate(username, reporter_results, os.path.join(base_dir, f"{username}.pdf"))
+                else:
+                    print(Style.BRIGHT + Fore.RED + "[-] PDF reporter is not available. Please install 'reportlab'." + Style.RESET_ALL)
             if args.excel:
                 e_rep = get_reporter('excel')
-                if e_rep: e_rep.generate(username, reporter_results, os.path.join(base_dir, f"{username}_report.xlsx"))
+                if e_rep: 
+                    e_rep.generate(username, reporter_results, os.path.join(base_dir, f"{username}_report.xlsx"))
+                else:
+                    print(Style.BRIGHT + Fore.RED + "[-] Excel reporter is not available. Please install 'openpyxl'." + Style.RESET_ALL)
 
         print()
     query_notify.finish()
