@@ -2,10 +2,10 @@
   <br>
   <a href="https://sherlock-project.github.io/" target="_blank"><img src="images/sherlock-logo.png" alt="sherlock"/></a>
   <br>
-  <span>Hunt down social media accounts by username across <a href="https://sherlockproject.xyz/sites">400+ social networks</a></span>
+  <span>Hunt down  social media accounts by username across <a href="https://sherlockproject.xyz/sites">400+ social networks</a></span>
   <br>
 </p>
-
+ 
 <p align="center">
   <a href="https://sherlockproject.xyz/installation">Installation</a>
   &nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;
@@ -21,17 +21,56 @@
 
 ## Installation
 
+<p align="center">
+  <a href="https://www.osint.industries/" target="_blank"><img src="images/banner.jpg" alt="OSINT Industries"/></a>
+</p>
+
 > [!WARNING]  
 > Packages for ParrotOS and Ubuntu 24.04, maintained by a third party, appear to be __broken__.  
 > Users of these systems should defer to [`uv`](https://docs.astral.sh/uv/)/`pipx`/`pip` or Docker.
 
 | Method | Notes |
 | - | - |
+| Standalone executable (see below) | Single file — no Python install required |
 | `pipx install sherlock-project` | `pip` or [`uv`](https://docs.astral.sh/uv/) may be used in place of `pipx` |
 | `docker run -it --rm sherlock/sherlock` |
 | `dnf install sherlock-project` | |
 
-Community-maintained packages are available for Debian (>= 13), Ubuntu (>= 22.10), Homebrew, Kali, and BlackArch. These packages are not directly supported or maintained by the Sherlock Project.
+### Standalone executable
+
+Sherlock can be packaged as a single executable with [PyInstaller](https://pyinstaller.org/). The frozen build bundles `data.json` locally, so it runs without a Python installation.
+
+```bash
+# Linux / macOS
+pip install pyinstaller .
+echo "0.16.1" > sherlock_project/resources/version.txt
+python -m PyInstaller --onefile --name sherlock \
+  --add-data "sherlock_project/resources/data.json:sherlock_project/resources" \
+  --add-data "sherlock_project/resources/version.txt:sherlock_project/resources" \
+  --copy-metadata sherlock-project --collect-all certifi \
+  --hidden-import requests_futures --exclude-module tomli \
+  sherlock_project/__main__.py
+./dist/sherlock --version
+./dist/sherlock user123
+
+# Windows (PowerShell)
+pip install pyinstaller .
+"0.16.1" | Out-File -Encoding ascii sherlock_project/resources/version.txt
+python -m PyInstaller --onefile --name sherlock `
+  --add-data "sherlock_project/resources/data.json;sherlock_project/resources" `
+  --add-data "sherlock_project/resources/version.txt;sherlock_project/resources" `
+  --copy-metadata sherlock-project --collect-all certifi `
+  --hidden-import requests_futures --exclude-module tomli `
+  sherlock_project/__main__.py
+.\dist\sherlock.exe --version
+.\dist\sherlock.exe user123
+
+REM Windows (CMD / Komut Istemi)
+pip install pyinstaller .
+echo 0.16.1> sherlock_project\resources\version.txt
+python -m PyInstaller --onefile --name sherlock --add-data "sherlock_project/resources/data.json;sherlock_project/resources" --add-data "sherlock_project/resources/version.txt;sherlock_project/resources" --copy-metadata sherlock-project --collect-all certifi --hidden-import requests_futures --exclude-module tomli sherlock_project/__main__.py
+dist\sherlock.exe --version
+dist\sherlock.exe user123
 
 See all alternative installation methods [here](https://sherlockproject.xyz/installation).
 
@@ -113,4 +152,12 @@ Creator - [Siddharth Dushantha](https://github.com/sdushantha)
 
 [ext_pypi]: https://pypi.org/project/sherlock-project/
 [ext_brew]: https://formulae.brew.sh/formula/sherlock
+<<<<<<< HEAD
 ...
+=======
+<<<<<<< Updated upstream
+
+=======
+...
+>>>>>>> Stashed changes
+>>>>>>> 7077331fb2a99839997d613631bf7450893e3b57
