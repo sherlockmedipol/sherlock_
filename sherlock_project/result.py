@@ -100,8 +100,24 @@ class QueryResult():
         """
         status = str(self.status)
         if self.context is not None:
-            # There is extra context information available about the results.
-            # Append it to the normal response text.
-            status += f" ({self.context})"
+            if isinstance(self.context, dict) and 'text' in self.context:
+                status += f" ({self.context.get('text')})"
+            else:
+                status += f" ({self.context})"
 
         return status
+
+    def get_as_dict(self):
+        """
+        Returns the QueryResult data as a dictionary.
+        This safe method helps new reporter scripts get structured data
+        without breaking the existing class design.
+        """
+        return {
+            "username": self.username,
+            "site_name": self.site_name,
+            "site_url_user": self.site_url_user,
+            "status": self.status.value,
+            "query_time": self.query_time,
+            "context": self.context
+        }

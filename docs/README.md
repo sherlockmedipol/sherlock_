@@ -152,8 +152,12 @@ Creator - [Siddharth Dushantha](https://github.com/sdushantha)
 
 [ext_pypi]: https://pypi.org/project/sherlock-project/
 [ext_brew]: https://formulae.brew.sh/formula/sherlock
+<<<<<<< HEAD
+...
+=======
 <<<<<<< Updated upstream
 
 =======
 ...
 >>>>>>> Stashed changes
+>>>>>>> 7077331fb2a99839997d613631bf7450893e3b57

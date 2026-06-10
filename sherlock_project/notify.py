@@ -298,27 +298,21 @@ class QueryNotifyPrint(QueryNotify):
         Nicely formatted string to get information about this object.
         """
         return str(self.result)
+
+
+class QueryNotifyReporter(QueryNotify):
+    """Query Notify Reporter Object."""
     
-
-class QueryNotifyGUI:
-    """
-    Instead of printing to the terminal, a notification class that sends data to the desktop interface via PyQt signals (QThread).
-    """
-    def __init__(self, result_signal):
-        # We receive the communication cable (signal) from the interface.
-        self.result_signal = result_signal
-
-    def start(self, message):
-        pass 
-
+    def __init__(self, result=None):
+        super().__init__(result)
+        self.accumulated_results = []
+        
+    def start(self, message=None):
+        pass
+        
     def update(self, result):
-        # This function is automatically triggered when Sherlock scans a site.
-        # result is an object of type QueryResult() containing results for this query.
+        self.result = result
+        self.accumulated_results.append(result)
         
-        status_str = "Found" if result.status.name == "CLAIMED" else "Not Found"
-        
-        # Instead of printing to the terminal, we emit a signal to the interface's table.
-        self.result_signal.emit(result.site_name, status_str, result.site_url_user)
-
-    def finish(self, message):
+    def finish(self, message=None):
         pass

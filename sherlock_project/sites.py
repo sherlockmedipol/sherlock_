@@ -75,6 +75,14 @@ class SiteInformation:
 
         return f"{self.name} ({self.url_home})"
 
+    def get_site_metadata(self) -> dict:
+        return {
+            "name": self.name,
+            "url_home": self.url_home,
+            "is_nsfw": self.is_nsfw,
+            "url_format": self.url_username_format
+        }
+
 
 class SitesInformation:
     def __init__(

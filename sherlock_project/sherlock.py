@@ -35,8 +35,7 @@ from sherlock_project.__init__ import (
     __shortname__,
     __version__,
     forge_api_latest_release,
-    get_resource_path,
-    is_frozen,
+    get_reporter,
 )
 
 from sherlock_project.result import QueryStatus
@@ -591,6 +590,27 @@ def main():
         help="Create Comma-Separated Values (CSV) File.",
     )
     parser.add_argument(
+        "--html",
+        action="store_true",
+        dest="html",
+        default=False,
+        help="Create a beautiful HTML report of the results.",
+    )
+    parser.add_argument(
+        "--pdf",
+        action="store_true",
+        dest="pdf",
+        default=False,
+        help="Create a PDF report of the results.",
+    )
+    parser.add_argument(
+        "--excel",
+        action="store_true",
+        dest="excel",
+        default=False,
+        help="Create an Excel report using openpyxl.",
+    )
+    parser.add_argument(
         "--xlsx",
         action="store_true",
         dest="xlsx",
@@ -987,6 +1007,31 @@ def main():
                 }
             )
             DataFrame.to_excel(f"{username}.xlsx", sheet_name="sheet1", index=False)
+
+        if args.html or args.pdf or args.excel:
+            reporter_results = []
+            for site in results:
+                res_obj = results[site]["status"]
+                if args.print_found and not args.print_all and res_obj.status != QueryStatus.CLAIMED:
+                    continue
+                
+                orig_context = res_obj.context
+                res_obj.context = {
+                    'text': orig_context if isinstance(orig_context, str) else str(orig_context),
+                    'http_status': results[site].get("http_status", "")
+                }
+                reporter_results.append(res_obj)
+
+            base_dir = args.folderoutput if args.folderoutput else ""
+            if args.html:
+                h_rep = get_reporter('html')
+                if h_rep: h_rep.generate(username, reporter_results, os.path.join(base_dir, f"{username}.html"))
+            if args.pdf:
+                p_rep = get_reporter('pdf')
+                if p_rep: p_rep.generate(username, reporter_results, os.path.join(base_dir, f"{username}.pdf"))
+            if args.excel:
+                e_rep = get_reporter('excel')
+                if e_rep: e_rep.generate(username, reporter_results, os.path.join(base_dir, f"{username}_report.xlsx"))
 
         print()
     query_notify.finish()
