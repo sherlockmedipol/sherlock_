@@ -57,10 +57,18 @@ forge_api_latest_release = "https://api.github.com/repos/sherlock-project/sherlo
 
 try:
     from .pdf_reporter import PDFReporter
+except ImportError:
+    PDFReporter = None
+
+try:
     from .excel_reporter import ExcelReporter
+except ImportError:
+    ExcelReporter = None
+
+try:
     from .html_reporter import HTMLReporter
 except ImportError:
-    PDFReporter = ExcelReporter = HTMLReporter = None
+    HTMLReporter = None
 
 __all__ = ['PDFReporter', 'ExcelReporter', 'HTMLReporter', 'get_reporter']
 
