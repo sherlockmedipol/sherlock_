@@ -35,6 +35,9 @@ from sherlock_project.__init__ import (
     __shortname__,
     __version__,
     forge_api_latest_release,
+    get_reporter,
+    is_frozen,
+    get_resource_path,
 )
 
 from sherlock_project.result import QueryStatus
@@ -427,18 +430,30 @@ def timeout_check(value):
 
 
 def handler(signal_received, frame):
+    """Exit gracefully without throwing errors
+    Source: https://www.devdungeon.com/content/python-catch-sigint-ctrl-c
+    """
     sys.exit(0)
 
 
+def format_version_string() -> str:
+    """Build the version string shown by --version and the CLI description."""
+    version_label = f"{__shortname__} v{__version__}"
+    if is_frozen():
+        return f"{version_label} (standalone executable)"
+    return version_label
+
+
 def main():
+    version_string = format_version_string()
     parser = ArgumentParser(
         formatter_class=RawDescriptionHelpFormatter,
-        description=f"{__longname__} (Version {__version__})",
+        description=f"{__longname__} ({version_string})",
     )
     parser.add_argument(
         "--version",
         action="version",
-        version=f"{__shortname__} v{__version__}",
+        version=version_string,
         help="Display version information and dependencies.",
     )
     parser.add_argument(
@@ -465,6 +480,27 @@ def main():
         dest="csv",
         default=False,
         help="Create Comma-Separated Values (CSV) File.",
+    )
+    parser.add_argument(
+        "--html",
+        action="store_true",
+        dest="html",
+        default=False,
+        help="Create a beautiful HTML report of the results.",
+    )
+    parser.add_argument(
+        "--pdf",
+        action="store_true",
+        dest="pdf",
+        default=False,
+        help="Create a PDF report of the results.",
+    )
+    parser.add_argument(
+        "--excel",
+        action="store_true",
+        dest="excel",
+        default=False,
+        help="Create an Excel report using openpyxl.",
     )
     parser.add_argument(
         "--xlsx",
@@ -614,10 +650,12 @@ def main():
         sys.exit(1)
 
     try:
-        if args.local:
+        use_bundled_manifest = args.local or (is_frozen() and not args.json_file)
+        if use_bundled_manifest:
             sites = SitesInformation(
-                os.path.join(os.path.dirname(__file__), "resources/data.json"),
+                str(get_resource_path("data.json")),
                 honor_exclusions=False,
+                do_not_exclude=args.site_list,
             )
         else:
             json_file_location = args.json_file
@@ -782,6 +820,40 @@ def main():
                 "response_time_s": response_time_s,
             })
             DataFrame.to_excel(f"{username}.xlsx", sheet_name="sheet1", index=False)
+
+        if args.html or args.pdf or args.excel:
+            reporter_results = []
+            for site in results:
+                res_obj = results[site]["status"]
+                if args.print_found and not args.print_all and res_obj.status != QueryStatus.CLAIMED:
+                    continue
+                
+                orig_context = res_obj.context
+                res_obj.context = {
+                    'text': orig_context if isinstance(orig_context, str) else str(orig_context),
+                    'http_status': results[site].get("http_status", "")
+                }
+                reporter_results.append(res_obj)
+
+            base_dir = args.folderoutput if args.folderoutput else ""
+            if args.html:
+                h_rep = get_reporter('html')
+                if h_rep: 
+                    h_rep.generate(username, reporter_results, os.path.join(base_dir, f"{username}.html"))
+                else:
+                    print(Style.BRIGHT + Fore.RED + "[-] HTML reporter is not available. Please install 'jinja2'." + Style.RESET_ALL)
+            if args.pdf:
+                p_rep = get_reporter('pdf')
+                if p_rep: 
+                    p_rep.generate(username, reporter_results, os.path.join(base_dir, f"{username}.pdf"))
+                else:
+                    print(Style.BRIGHT + Fore.RED + "[-] PDF reporter is not available. Please install 'reportlab'." + Style.RESET_ALL)
+            if args.excel:
+                e_rep = get_reporter('excel')
+                if e_rep: 
+                    e_rep.generate(username, reporter_results, os.path.join(base_dir, f"{username}_report.xlsx"))
+                else:
+                    print(Style.BRIGHT + Fore.RED + "[-] Excel reporter is not available. Please install 'openpyxl'." + Style.RESET_ALL)
 
         print()
     query_notify.finish()

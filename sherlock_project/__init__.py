@@ -1,3 +1,4 @@
+
 """ Sherlock Module
 
 This module contains the main logic to search for usernames at social
@@ -7,7 +8,24 @@ networks.
 
 from importlib.metadata import version as pkg_version, PackageNotFoundError
 import pathlib
-import tomli
+import sys
+
+
+def is_frozen() -> bool:
+    """Return True when running as a PyInstaller standalone executable."""
+    return getattr(sys, "frozen", False)
+
+
+def get_package_path() -> pathlib.Path:
+    """Return the directory containing the sherlock_project package."""
+    if is_frozen():
+        return pathlib.Path(sys._MEIPASS) / "sherlock_project"
+    return pathlib.Path(__file__).resolve().parent
+
+
+def get_resource_path(filename: str) -> pathlib.Path:
+    """Return the absolute path to a file under sherlock_project/resources/."""
+    return get_package_path() / "resources" / filename
 
 
 def get_version() -> str:
@@ -15,7 +33,15 @@ def get_version() -> str:
     try:
         return pkg_version("sherlock_project")
     except PackageNotFoundError:
-        pyproject_path: pathlib.Path = pathlib.Path(__file__).resolve().parent.parent / "pyproject.toml"
+        if is_frozen():
+            version_file = get_resource_path("version.txt")
+            if version_file.is_file():
+                return version_file.read_text(encoding="utf-8").strip()
+            return "0.0.0+standalone"
+        pyproject_path: pathlib.Path = (
+            pathlib.Path(__file__).resolve().parent.parent / "pyproject.toml"
+        )
+        import tomli
         with pyproject_path.open("rb") as f:
             pyproject_data = tomli.load(f)
         return pyproject_data["tool"]["poetry"]["version"]
@@ -28,6 +54,34 @@ __longname__    = "Sherlock: Find Usernames Across Social Networks"
 __version__     = get_version()
 
 forge_api_latest_release = "https://api.github.com/repos/sherlock-project/sherlock/releases/latest"
+
+try:
+    from .pdf_reporter import PDFReporter
+except ImportError:
+    PDFReporter = None
+
+try:
+    from .excel_reporter import ExcelReporter
+except ImportError:
+    ExcelReporter = None
+
+try:
+    from .html_reporter import HTMLReporter
+except ImportError:
+    HTMLReporter = None
+
+__all__ = ['PDFReporter', 'ExcelReporter', 'HTMLReporter', 'get_reporter']
+
+def get_reporter(format_type: str):
+    """Factory method for safely initializing reporter classes."""
+    reporters = {
+        'pdf': PDFReporter,
+        'excel': ExcelReporter,
+        'html': HTMLReporter
+    }
+    cls = reporters.get(format_type.lower())
+    return cls() if cls else None
+
 # Optional tools added for GUI site management and username variations
 
 _optional_tools = {
